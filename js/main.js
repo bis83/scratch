@@ -5,7 +5,7 @@
     let canvas = null;
     let opengl = null;
 
-    const init = () => {
+    const setup = () => {
         canvas = document.createElement("canvas");
         document.body.appendChild(canvas);
 
@@ -15,8 +15,6 @@
     };
 
     const update = () => {
-        requestAnimationFrame(update);
-
         const width = window.innerWidth;
         if(width !== opengl.canvas.width) {
             opengl.canvas.width = width;
@@ -30,7 +28,11 @@
         opengl.clearColor(0, 0, 0, 0);
         opengl.clearDepth(1.0);
         opengl.clear(opengl.COLOR_BUFFER_BIT | opengl.DEPTH_BUFFER_BIT);
+
+        shader.render(opengl);
+
+        requestAnimationFrame(update);
     };
 
-    window.addEventListener("load", init);
+    window.addEventListener("load", setup);
 })();
