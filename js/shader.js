@@ -8,9 +8,9 @@ var shader = shader || {};
     uniform mat4 uWorld;
     uniform mat4 uViewProjection;
     void main() {
-        float x = (gl_VertexID & 0x1) == 0 ? -0.5 : +0.5;
-        float y = (gl_VertexID & 0x2) == 0 ? -0.5 : +0.5;
-        gl_Position = uViewProjection * uWorld * vec4(x, y, 0, 1);
+        float x = (gl_VertexID & 0x1) == 0 ? -50.0 : +50.0;
+        float z = (gl_VertexID & 0x2) == 0 ? -50.0 : +50.0;
+        gl_Position = uViewProjection * uWorld * vec4(x, 0, z, 1);
     }`;
     const FS_SOURCE = `#version 300 es
     precision mediump float;
