@@ -4,6 +4,7 @@
 var viewport = viewport || {};
 
 (() => {
+    let gamepad = null;
     let isPointerLocked = false;
     const keymap = {
         w: false,
@@ -19,6 +20,14 @@ var viewport = viewport || {};
     const matrix = mat4.create();
 
     const setup = (opengl) => {
+        window.addEventListener("gamepadconnected", (ev) => {
+            gamepad = ev.gamepad;
+        });
+        window.addEventListener("gamepaddisconnected", (ev) => {
+            if(gamepad === ev.gamepad) {
+                gamepad = null;
+            }
+        });
         document.addEventListener("keydown", (ev) => {
             if(!isPointerLocked) {
                 return;
@@ -68,38 +77,14 @@ var viewport = viewport || {};
 
     const updateAngle = (mx, my) => {
         // fixme:
-        azimuth += -mx / 10.0;
-        altitude += -my / 10.0;
-        if(altitude > 90) {
-            altitude = 90;
-        }
-        if(altitude < -90) {
-            altitude = -90;
-        }
+        azimuth  = azimuth - mx;
+        altitude = Math.max(Math.min(altitude - my, 90), -90);
     };
 
-    const updatePosition = () => {
-        // fixme:
-        if(keymap.w) {
-            const d = vec3.fromValues(0, 0, -1);
-            vec3.rotateY(d, d, vec3.fromValues(0, 0, 0), azimuth * Math.PI / 180);
-            vec3.add(position, position, d);
-        }
-        if(keymap.a) {
-            const d = vec3.fromValues(-1, 0, 0);
-            vec3.rotateY(d, d, vec3.fromValues(0, 0, 0), azimuth * Math.PI / 180);
-            vec3.add(position, position, d);
-        }
-        if(keymap.s) {
-            const d = vec3.fromValues(0, 0, 1);
-            vec3.rotateY(d, d, vec3.fromValues(0, 0, 0), azimuth * Math.PI / 180);
-            vec3.add(position, position, d);
-        }
-        if(keymap.d) {
-            const d = vec3.fromValues(1, 0, 0);
-            vec3.rotateY(d, d, vec3.fromValues(0, 0, 0), azimuth * Math.PI / 180);
-            vec3.add(position, position, d);
-        }
+    const updatePosition = (mx, my) => {
+        const d = vec3.fromValues(mx, 0, my);
+        vec3.rotateY(d, d, vec3.fromValues(0, 0, 0), azimuth * Math.PI / 180);
+        vec3.add(position, position, d);
     };
 
     const update = (opengl) => {
@@ -117,7 +102,32 @@ var viewport = viewport || {};
         opengl.clearDepth(1.0);
         opengl.clear(opengl.COLOR_BUFFER_BIT | opengl.DEPTH_BUFFER_BIT);
 
-        updatePosition();
+        if(gamepad) {
+            const gamepads = navigator.getGamepads();
+            gamepad = gamepads[gamepad.index];
+            {
+                const mx = Math.trunc(gamepad.axes[0] * 4) / 4;
+                const my = Math.trunc(gamepad.axes[1] * 4) / 4;
+                updatePosition(mx, my);
+            }
+            {
+                const mx = Math.trunc(gamepad.axes[2] * 4) / 4;
+                const my = Math.trunc(gamepad.axes[3] * 4) / 4;
+                updateAngle(mx, my);
+            }
+        }
+        if(keymap.w) {
+            updatePosition(0, -1);
+        }
+        if(keymap.a) {
+            updatePosition(-1, 0);
+        }
+        if(keymap.s) {
+            updatePosition(0, +1);
+        }
+        if(keymap.d) {
+            updatePosition(+1, 0);
+        }
 
         const v = mat4.create();
         const q = quat.create();
