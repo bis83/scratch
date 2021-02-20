@@ -14,9 +14,16 @@ var viewport = viewport || {};
         space: false
     };
 
+    const fovy = Math.PI / 4;
+    let aspect = 1;
+    const nearPlane = 0.1;
+    const farPlane = 2000.0;
+
+    const eyeHeight = 1.5;
+
     let azimuth = 0;    // degree
     let altitude = 0;   // degree
-    const position = vec3.fromValues(0, 1.5, 0);
+    const position = vec3.fromValues(0, eyeHeight, 0);
     const matrix = mat4.create();
 
     const setup = (opengl) => {
@@ -68,16 +75,16 @@ var viewport = viewport || {};
             if(!isPointerLocked) {
                 return;
             }
-            const mx = ev.movementX;
-            const my = ev.movementY;
+            const mouseSensitivity = 0.1;
+            const mx = ev.movementX * mouseSensitivity;
+            const my = ev.movementY * mouseSensitivity;
             updateAngle(mx, my);
             ev.preventDefault();
         });
     };
 
     const updateAngle = (mx, my) => {
-        // fixme:
-        azimuth  = azimuth - mx;
+        azimuth  = (((Math.trunc(100 * (azimuth - mx)) % 36000) + 36000) % 36000) / 100;
         altitude = Math.max(Math.min(altitude - my, 90), -90);
     };
 
@@ -87,34 +94,16 @@ var viewport = viewport || {};
         vec3.add(position, position, d);
     };
 
-    const update = (opengl) => {
-        const width = window.innerWidth;
-        if(width !== opengl.canvas.width) {
-            opengl.canvas.width = width;
-        }
-        const height = window.innerHeight;
-        if(height !== opengl.canvas.height) {
-            opengl.canvas.height = height;
-        }
-
-        opengl.viewport(0, 0, opengl.canvas.width, opengl.canvas.height);
-        opengl.clearColor(0, 0, 0, 0);
-        opengl.clearDepth(1.0);
-        opengl.clear(opengl.COLOR_BUFFER_BIT | opengl.DEPTH_BUFFER_BIT);
-
+    const updateByController = () => {
         if(gamepad) {
             const gamepads = navigator.getGamepads();
             gamepad = gamepads[gamepad.index];
-            {
-                const mx = Math.trunc(gamepad.axes[0] * 4) / 4;
-                const my = Math.trunc(gamepad.axes[1] * 4) / 4;
-                updatePosition(mx, my);
-            }
-            {
-                const mx = Math.trunc(gamepad.axes[2] * 4) / 4;
-                const my = Math.trunc(gamepad.axes[3] * 4) / 4;
-                updateAngle(mx, my);
-            }
+            const lx = Math.trunc(gamepad.axes[0] * 4) / 4;
+            const ly = Math.trunc(gamepad.axes[1] * 4) / 4;
+            updatePosition(lx, ly);
+            const rx = Math.trunc(gamepad.axes[2] * 4) / 4;
+            const ry = Math.trunc(gamepad.axes[3] * 4) / 4;
+            updateAngle(rx, ry);
         }
         if(keymap.w) {
             updatePosition(0, -1);
@@ -128,16 +117,43 @@ var viewport = viewport || {};
         if(keymap.d) {
             updatePosition(+1, 0);
         }
+    };
 
+    const updateByRenderTarget = (opengl) => {
+        const width = window.innerWidth;
+        if(width !== opengl.canvas.width) {
+            opengl.canvas.width = width;
+        }
+        const height = window.innerHeight;
+        if(height !== opengl.canvas.height) {
+            opengl.canvas.height = height;
+        }
+        opengl.viewport(0, 0, opengl.canvas.width, opengl.canvas.height);
+        opengl.clearColor(0, 0, 0, 0);
+        opengl.clearDepth(1.0);
+        opengl.clear(opengl.COLOR_BUFFER_BIT | opengl.DEPTH_BUFFER_BIT);
+        aspect = width / height;
+    };
+
+    const viewMatrix = () => {
         const v = mat4.create();
         const q = quat.create();
-        quat.fromEuler(q, altitude, azimuth, 0);   // fixme:
+        quat.fromEuler(q, altitude, azimuth, 0);
         mat4.fromRotationTranslation(v, q, position);
         mat4.invert(v, v);
+        return v;
+    };
 
+    const projectionMatrix = () => {
         const p = mat4.create();
-        mat4.perspective(p, Math.PI / 4, width / height, 0.01, 1000.0);
-        mat4.multiply(matrix, p, v);
+        mat4.perspective(p, fovy, aspect, nearPlane, farPlane);
+        return p;
+    };
+
+    const update = (opengl) => {
+        updateByController();
+        updateByRenderTarget(opengl);
+        mat4.multiply(matrix, projectionMatrix(), viewMatrix());
     };
 
     const viewProjection = () => {
