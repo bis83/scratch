@@ -10,7 +10,7 @@
         document.body.appendChild(canvas);
         opengl = canvas.getContext("webgl2");
         viewport.setup(opengl);
-
+        shader.setup(opengl);
         update();
     };
 

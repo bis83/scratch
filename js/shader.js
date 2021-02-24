@@ -5,13 +5,14 @@ var shader = shader || {};
 
 (() => {
     const VS_SOURCE = `#version 300 es
+    uniform float uHeight;
     uniform mat4 uWorld;
     uniform mat4 uViewProjection;
     out vec4 vColor;
     void main() {
         float x = (gl_VertexID & 0x1) == 0 ? -50.0 : +50.0;
         float z = (gl_VertexID & 0x2) == 0 ? -50.0 : +50.0;
-        gl_Position = uViewProjection * uWorld * vec4(x, 0, z, 1);
+        gl_Position = uViewProjection * uWorld * vec4(x, uHeight, z, 1);
         vColor = vec4(
             (gl_VertexID & 0x1) == 0 ? 0.0 : 1.0,   // r
             0,                                      // g
@@ -27,6 +28,7 @@ var shader = shader || {};
     }`;
 
     let prog = null;
+    let uHeight = null;
     let uWorld = null;
     let uViewProjection = null;
 
@@ -62,19 +64,22 @@ var shader = shader || {};
             prog = createProgram(opengl,
                 createShader(opengl, opengl.VERTEX_SHADER, VS_SOURCE),
                 createShader(opengl, opengl.FRAGMENT_SHADER, FS_SOURCE));
+            uHeight = opengl.getUniformLocation(prog, "uHeight");
             uWorld = opengl.getUniformLocation(prog, "uWorld");
             uViewProjection = opengl.getUniformLocation(prog, "uViewProjection");
         }
     };
 
     const render = (opengl, viewport, mesh) => {
-        setup(opengl);
-
         opengl.useProgram(prog);
         opengl.uniformMatrix4fv(uWorld, false, mat4.create());
         opengl.uniformMatrix4fv(uViewProjection, false, viewport.viewProjection());
+        opengl.uniform1f(uHeight, 0.0);
+        opengl.drawArrays(opengl.TRIANGLE_STRIP, 0, 4);
+        opengl.uniform1f(uHeight, 3.0);
         opengl.drawArrays(opengl.TRIANGLE_STRIP, 0, 4);
     };
 
+    shader.setup = setup;
     shader.render = render;
 })();
