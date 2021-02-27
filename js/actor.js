@@ -1,7 +1,7 @@
 // Copyright (c) bis83. Distributed under the MIT License.
 "use strict";
 
-var viewport = viewport || {};
+var actor = actor || {};
 
 (() => {
     let gamepad = null;
@@ -15,18 +15,15 @@ var viewport = viewport || {};
     };
 
     const fovy = Math.PI / 4;
-    let aspect = 1;
     const nearPlane = 0.1;
     const farPlane = 2000.0;
-
     const eyeHeight = 1.5;
 
     let azimuth = 0;    // degree
     let altitude = 0;   // degree
     const position = vec3.fromValues(0, eyeHeight, 0);
-    const matrix = mat4.create();
 
-    const setup = (opengl) => {
+    const setup = () => {
         window.addEventListener("gamepadconnected", (ev) => {
             gamepad = ev.gamepad;
         });
@@ -62,16 +59,16 @@ var viewport = viewport || {};
             ev.preventDefault();
         });
         document.addEventListener("pointerlockchange", (ev) => {
-            isPointerLocked = document.pointerLockElement === opengl.canvas;
+            isPointerLocked = document.pointerLockElement === document.body;
             ev.preventDefault();
         });
-        opengl.canvas.addEventListener("click", (ev) => {
+        document.body.addEventListener("click", (ev) => {
             if(!isPointerLocked) {
-                opengl.canvas.requestPointerLock();
+                document.body.requestPointerLock();
             }
             ev.preventDefault();
         });
-        opengl.canvas.addEventListener("mousemove", (ev) => {
+        document.body.addEventListener("mousemove", (ev) => {
             if(!isPointerLocked) {
                 return;
             }
@@ -119,20 +116,8 @@ var viewport = viewport || {};
         }
     };
 
-    const updateByRenderTarget = (opengl) => {
-        const width = window.innerWidth;
-        if(width !== opengl.canvas.width) {
-            opengl.canvas.width = width;
-        }
-        const height = window.innerHeight;
-        if(height !== opengl.canvas.height) {
-            opengl.canvas.height = height;
-        }
-        opengl.viewport(0, 0, opengl.canvas.width, opengl.canvas.height);
-        opengl.clearColor(0, 0, 0, 0);
-        opengl.clearDepth(1.0);
-        opengl.clear(opengl.COLOR_BUFFER_BIT | opengl.DEPTH_BUFFER_BIT);
-        aspect = width / height;
+    const update = () => {
+        updateByController();
     };
 
     const viewMatrix = () => {
@@ -144,23 +129,19 @@ var viewport = viewport || {};
         return v;
     };
 
-    const projectionMatrix = () => {
+    const projectionMatrix = (aspect) => {
         const p = mat4.create();
         mat4.perspective(p, fovy, aspect, nearPlane, farPlane);
         return p;
     };
 
-    const update = (opengl) => {
-        updateByController();
-        updateByRenderTarget(opengl);
-        mat4.multiply(matrix, projectionMatrix(), viewMatrix());
+    const viewProjection = (aspect) => {
+        const m = mat4.create();
+        mat4.multiply(m, projectionMatrix(aspect), viewMatrix());
+        return m;
     };
 
-    const viewProjection = () => {
-        return matrix;
-    };
-
-    viewport.setup = setup;
-    viewport.update = update;
-    viewport.viewProjection = viewProjection;
+    actor.setup = setup;
+    actor.update = update;
+    actor.viewProjection = viewProjection;
 })();
