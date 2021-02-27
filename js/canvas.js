@@ -7,19 +7,18 @@ var canvas = canvas || {};
     let gl = null;
 
     const VS_SOURCE = `#version 300 es
-    uniform float uHeight;
+    uniform float uX;
+    uniform float uZ;
     uniform mat4 uWorld;
     uniform mat4 uViewProjection;
     out vec4 vColor;
     void main() {
-        float x = (gl_VertexID & 0x1) == 0 ? -50.0 : +50.0;
-        float z = (gl_VertexID & 0x2) == 0 ? -50.0 : +50.0;
-        gl_Position = uViewProjection * uWorld * vec4(x, uHeight, z, 1);
-        vColor = vec4(
-            (gl_VertexID & 0x1) == 0 ? 0.0 : 1.0,   // r
-            0,                                      // g
-            (gl_VertexID & 0x2) == 0 ? 0.0 : 1.0,   // b
-            1);                                     // a
+        float x = 2.0 * (uX + ((gl_VertexID & 0x1) == 0 ? 0.0 : 1.0));
+        float z = 2.0 * (uZ + ((gl_VertexID & 0x2) == 0 ? 0.0 : 1.0));
+        gl_Position = uViewProjection * uWorld * vec4(x, 0, z, 1);
+        float u = (gl_VertexID & 0x1) == 0 ? 0.0 : 1.0;
+        float v = (gl_VertexID & 0x2) == 0 ? 0.0 : 1.0;
+        vColor = vec4(u, v, 0, 1);
     }`;
     const FS_SOURCE = `#version 300 es
     precision mediump float;
@@ -30,7 +29,8 @@ var canvas = canvas || {};
     }`;
 
     let prog = null;
-    let uHeight = null;
+    let uX = null;
+    let uZ = null;
     let uWorld = null;
     let uViewProjection = null;
 
@@ -69,7 +69,8 @@ var canvas = canvas || {};
         prog = createProgram(
             createShader(gl.VERTEX_SHADER, VS_SOURCE),
             createShader(gl.FRAGMENT_SHADER, FS_SOURCE));
-        uHeight = gl.getUniformLocation(prog, "uHeight");
+        uX = gl.getUniformLocation(prog, "uX");
+        uZ = gl.getUniformLocation(prog, "uZ");
         uWorld = gl.getUniformLocation(prog, "uWorld");
         uViewProjection = gl.getUniformLocation(prog, "uViewProjection");
     };
@@ -92,10 +93,13 @@ var canvas = canvas || {};
         gl.useProgram(prog);
         gl.uniformMatrix4fv(uWorld, false, mat4.create());
         gl.uniformMatrix4fv(uViewProjection, false, actor.viewProjection(aspect));
-        gl.uniform1f(uHeight, 0.0);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        gl.uniform1f(uHeight, 3.0);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        for(let i=0; i<world.sizeX(); ++i) {
+            for(let j=0; j<world.sizeZ(); ++j) {
+                gl.uniform1f(uX, i);
+                gl.uniform1f(uZ, j);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+        }
     };
 
     canvas.setup = setup;

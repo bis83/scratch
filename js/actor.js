@@ -14,14 +14,15 @@ var actor = actor || {};
         space: false
     };
 
-    const fovy = Math.PI / 4;
+    const fovy = Math.PI / 5;
     const nearPlane = 0.1;
     const farPlane = 2000.0;
     const eyeHeight = 1.5;
 
     let azimuth = 0;    // degree
     let altitude = 0;   // degree
-    const position = vec3.fromValues(0, eyeHeight, 0);
+    let posX = 32;
+    let posZ = 32;
 
     const setup = () => {
         window.addEventListener("gamepadconnected", (ev) => {
@@ -86,9 +87,13 @@ var actor = actor || {};
     };
 
     const updatePosition = (mx, my) => {
-        const d = vec3.fromValues(mx, 0, my);
-        vec3.rotateY(d, d, vec3.fromValues(0, 0, 0), azimuth * Math.PI / 180);
-        vec3.add(position, position, d);
+        const moveSpeed = 0.1;
+        const d = vec2.fromValues(mx, my);
+        vec2.normalize(d, d);
+        vec2.scale(d, d, moveSpeed);
+        vec2.rotate(d, d, vec2.fromValues(0, 0), -azimuth * Math.PI / 180);
+        posX += d[0];
+        posZ += d[1];
     };
 
     const updateByController = () => {
@@ -102,29 +107,23 @@ var actor = actor || {};
             const ry = Math.trunc(gamepad.axes[3] * 4) / 4;
             updateAngle(rx, ry);
         }
-        if(keymap.w) {
-            updatePosition(0, -1);
-        }
-        if(keymap.a) {
-            updatePosition(-1, 0);
-        }
-        if(keymap.s) {
-            updatePosition(0, +1);
-        }
-        if(keymap.d) {
-            updatePosition(+1, 0);
+        if(keymap.w || keymap.a || keymap.s || keymap.d) {
+            const mx = (keymap.a ? -1 : 0) + (keymap.d ? +1 : 0);
+            const my = (keymap.w ? -1 : 0) + (keymap.s ? +1 : 0);
+            updatePosition(mx, my);
         }
     };
 
-    const update = () => {
+    const step = () => {
         updateByController();
     };
 
     const viewMatrix = () => {
+        const pos = vec3.fromValues(posX, eyeHeight, posZ);
+        const rot = quat.create();
+        quat.fromEuler(rot, altitude, azimuth, 0);
         const v = mat4.create();
-        const q = quat.create();
-        quat.fromEuler(q, altitude, azimuth, 0);
-        mat4.fromRotationTranslation(v, q, position);
+        mat4.fromRotationTranslation(v, rot, pos);
         mat4.invert(v, v);
         return v;
     };
@@ -142,6 +141,6 @@ var actor = actor || {};
     };
 
     actor.setup = setup;
-    actor.update = update;
+    actor.step = step;
     actor.viewProjection = viewProjection;
 })();

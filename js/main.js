@@ -10,8 +10,8 @@
     };
 
     const update = () => {
-        world.update();
-        actor.update();
+        world.step();
+        actor.step();
         canvas.render(actor, world);
         requestAnimationFrame(update);
     };
