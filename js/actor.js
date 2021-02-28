@@ -21,8 +21,8 @@ var actor = actor || {};
 
     let azimuth = 0;    // degree
     let altitude = 0;   // degree
-    let posX = 32;
-    let posZ = 32;
+    let posX = 65;
+    let posZ = 65;
 
     const setup = () => {
         window.addEventListener("gamepadconnected", (ev) => {

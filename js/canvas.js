@@ -9,6 +9,7 @@ var canvas = canvas || {};
     const VS_SOURCE = `#version 300 es
     uniform float uX;
     uniform float uZ;
+    uniform float uAlpha;
     uniform mat4 uWorld;
     uniform mat4 uViewProjection;
     out vec4 vColor;
@@ -18,7 +19,7 @@ var canvas = canvas || {};
         gl_Position = uViewProjection * uWorld * vec4(x, 0, z, 1);
         float u = (gl_VertexID & 0x1) == 0 ? 0.0 : 1.0;
         float v = (gl_VertexID & 0x2) == 0 ? 0.0 : 1.0;
-        vColor = vec4(u, v, 0, 1);
+        vColor = vec4(u * uAlpha, v * uAlpha, 0, 1);
     }`;
     const FS_SOURCE = `#version 300 es
     precision mediump float;
@@ -31,6 +32,7 @@ var canvas = canvas || {};
     let prog = null;
     let uX = null;
     let uZ = null;
+    let uAlpha = null;
     let uWorld = null;
     let uViewProjection = null;
 
@@ -71,6 +73,7 @@ var canvas = canvas || {};
             createShader(gl.FRAGMENT_SHADER, FS_SOURCE));
         uX = gl.getUniformLocation(prog, "uX");
         uZ = gl.getUniformLocation(prog, "uZ");
+        uAlpha = gl.getUniformLocation(prog, "uAlpha");
         uWorld = gl.getUniformLocation(prog, "uWorld");
         uViewProjection = gl.getUniformLocation(prog, "uViewProjection");
     };
@@ -95,8 +98,14 @@ var canvas = canvas || {};
         gl.uniformMatrix4fv(uViewProjection, false, actor.viewProjection(aspect));
         for(let i=0; i<world.sizeX(); ++i) {
             for(let j=0; j<world.sizeZ(); ++j) {
+                const data = world.at(i, j);
                 gl.uniform1f(uX, i);
                 gl.uniform1f(uZ, j);
+                if(data) {
+                    gl.uniform1f(uAlpha, 1);
+                } else {
+                    gl.uniform1f(uAlpha, 0.05);
+                }
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
         }

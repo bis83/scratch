@@ -7,7 +7,16 @@ var world = world || {};
     const sx = 64;
     const sz = 64;
 
+    const floor = Array.from({length: sx * sz}, (v, i) => null);
+
     const setup = () => {
+        for(let i=28; i<36; ++i) {
+            for(let j=28; j<36; ++j) {
+                floor[i + j * sx] = {
+                    type: "floor"
+                };
+            }
+        }
     };
 
     const step = () => {  
@@ -22,7 +31,7 @@ var world = world || {};
     };
 
     const at = (x, z) => {
-        return null;
+        return floor[x + z * sx];
     };
 
     world.setup = setup;
