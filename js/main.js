@@ -2,17 +2,18 @@
 "use strict";
 
 (() => {
+    let st = store.create();
+
     const setup = () => {
         canvas.setup();
-        actor.setup();
-        world.setup();
+        signal.setup();
         update();
     };
 
     const update = () => {
-        world.step();
-        actor.step();
-        canvas.render(actor, world);
+        const si = signal.poll();
+        st = logic(si, st);
+        canvas.render(st);
         requestAnimationFrame(update);
     };
 

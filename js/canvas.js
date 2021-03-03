@@ -29,13 +29,6 @@ var canvas = canvas || {};
         finalColor = vColor;
     }`;
 
-    let prog = null;
-    let uX = null;
-    let uZ = null;
-    let uAlpha = null;
-    let uWorld = null;
-    let uViewProjection = null;
-
     const createShader = (type, source) => {
         const shader = gl.createShader(type);
         gl.shaderSource(shader, source);
@@ -63,6 +56,40 @@ var canvas = canvas || {};
         return program;
     };
 
+    const fovy = Math.PI / 5;
+    const nearPlane = 0.1;
+    const farPlane = 2000.0;
+    const eyeHeight = 1.5;
+
+    const viewMatrix = (st) => {
+        const pos = vec3.fromValues(st.actor.x, eyeHeight, st.actor.z);
+        const rot = quat.create();
+        quat.fromEuler(rot, st.actor.altitude, st.actor.azimuth, 0);
+        const v = mat4.create();
+        mat4.fromRotationTranslation(v, rot, pos);
+        mat4.invert(v, v);
+        return v;
+    };
+
+    const projectionMatrix = (aspect) => {
+        const p = mat4.create();
+        mat4.perspective(p, fovy, aspect, nearPlane, farPlane);
+        return p;
+    };
+    
+    const viewProjection = (st, aspect) => {
+        const m = mat4.create();
+        mat4.multiply(m, projectionMatrix(aspect), viewMatrix(st));
+        return m;
+    };
+
+    let prog = null;
+    let uX = null;
+    let uZ = null;
+    let uAlpha = null;
+    let uWorld = null;
+    let uViewProjection = null;
+
     const setup = () => {
         const canvas = document.createElement("canvas");
         document.body.appendChild(canvas);
@@ -78,7 +105,7 @@ var canvas = canvas || {};
         uViewProjection = gl.getUniformLocation(prog, "uViewProjection");
     };
 
-    const render = (actor, world) => {
+    const render = (st) => {
         const width = window.innerWidth;
         if(width !== gl.canvas.width) {
             gl.canvas.width = width;
@@ -95,19 +122,12 @@ var canvas = canvas || {};
 
         gl.useProgram(prog);
         gl.uniformMatrix4fv(uWorld, false, mat4.create());
-        gl.uniformMatrix4fv(uViewProjection, false, actor.viewProjection(aspect));
-        for(let i=0; i<world.sizeX(); ++i) {
-            for(let j=0; j<world.sizeZ(); ++j) {
-                const data = world.at(i, j);
-                gl.uniform1f(uX, i);
-                gl.uniform1f(uZ, j);
-                if(data) {
-                    gl.uniform1f(uAlpha, 1);
-                } else {
-                    gl.uniform1f(uAlpha, 0.05);
-                }
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            }
+        gl.uniformMatrix4fv(uViewProjection, false, viewProjection(st, aspect));
+        for(const floor of st.floors) {
+            gl.uniform1f(uX, floor.x);
+            gl.uniform1f(uZ, floor.z);
+            gl.uniform1f(uAlpha, 1);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
     };
 
